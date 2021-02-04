@@ -38,9 +38,9 @@ ext = { # Height and time extents
 }
 
 res = { # Analysis resolution
-  "x": 10, #meters
-  "y": 10, #meters
-  "z": 1, #meters
+  "x": 5, #meters
+  "y": 5, #meters
+  "z": 0.5, #meters
   "t": 1 #days
 }
 
@@ -61,26 +61,30 @@ dems = [["terrain.tif","Height"],
         ["Kleggerud_Svartskifer_200908-DEM.tiff","Height_08_09_2020"]]
 
 # Output data
-fishnet_poly_fc = os.path.join(gdb, r"points_fishnet")
-fishnet_fc = os.path.join(gdb, r"points_fishnet_label")
-points_cube_fc = os.path.join(gdb, r"points_cube")
-nc_results_file = os.path.join(folder, r"nc_time_result.nc")
+fishnet_poly_fc = os.path.join(gdb, r"hres_fishnet")
+fishnet_fc = os.path.join(gdb, r"hres_fishnet_label")
+points_cube_fc = os.path.join(gdb, r"hres_cube")
+nc_results_file = os.path.join(folder, r"hres_time_result.nc")
 
 ###############################################################################
 ## Script
 ###############################################################################
 
+print("Script started: {}".format(datetime.datetime.now()))
+
 # Create fishnet for analysis bounding box
-#create_fishnet(fishnet_poly_fc, bbox_fc, res)
+create_fishnet(fishnet_poly_fc, bbox_fc, res)
 
 # Tag points in fishnet with analysis extent
-#tag_fishnet(fishnet_fc, extent_fc)
+tag_fishnet(fishnet_fc, extent_fc)
 
 # Add DEM heights as attributes to fishnet points
-#add_dem_heights(fishnet_fc, dem_folder, dems)
+add_dem_heights(fishnet_fc, dem_folder, dems)
 
 # Add z-dimension to fishnet to create 3D point cube
-#fishnet_2_point_cube(points_cube_fc, fishnet_fc, ext, res)
+fishnet_2_point_cube(points_cube_fc, fishnet_fc, ext, res)
 
 # Convert 3D point cube to NetCDF-file
 point_cube_2_netcdf(points_cube_fc, nc_results_file, ext, res)
+
+print("Script ended: {}".format(datetime.datetime.now()))
