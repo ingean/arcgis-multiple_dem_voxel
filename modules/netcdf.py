@@ -19,7 +19,7 @@ def calc_dim(cube_fc, ext, res):
   y_dim = ((round(desc.extent.YMax, 4) - round(desc.extent.YMin, 4)) / res['y']) + 1
 
   global z_dim
-  z_dim = ((round(desc.extent.ZMax, 1) - round(desc.extent.ZMin, 1)) / res['z']) + 1
+  z_dim = ((ext['max_z'] - ext['min_z']) / res['z']) + 1
 
   global t_dim
   t_dim = ((ext['max_t'] - ext['min_t']).days / res['t'])
@@ -81,46 +81,42 @@ def assign_coord_values(input_fc, ds, ext, res):
     round(desc.extent.YMax, 4) + res['y'], res['y']).tolist()
 
   ds['z'][:] = np.arange(
-    round(desc.extent.ZMin, 4), 
-    round(desc.extent.ZMax, 4) + res['z'], res['z']).tolist()
+    ext['min_z'], 
+    ext['max_z'] + res['z'], res['z']).tolist()
 
   print("Finished assigning coordinate variables!")
   return ds
 
-def assign_values(input_fc, ds, it):
+def assign_values(input_fc, ds, ext, res, it):
   print("Adding data for timestep {}...".format(it))
-  sql = 'ORDER BY X, Y, Z'
+  sql = 'ORDER BY X, Y'
 
   with arcpy.da.SearchCursor(input_fc, "*", sql_clause=(None, sql)) as cursor:
-    
-    first = True
-    ix, iy, iz, i, prev_x, prev_y = 0, 0, 0, 0, 0, 0
+    ix, iy, prev_x, prev_y, first = 0, 0, 0, 0, True
     
     for r in cursor:
-      x = coord('X', r, cursor)
-      y = coord('Y', r, cursor)
-      z = coord('Z', r, cursor)
       
       if first:
+        prev_x = coord('X', r, cursor)
+        prev_y = coord('Y', r, cursor)
         first = False
-        prev_x = x
-        prev_y = y
-      else:
+      
+      x = coord('X', r, cursor)
+      y = coord('Y', r, cursor)
+      z = ext['min_z']
+      
+      for iz in range(int(z_dim)):
         if prev_x != x:
           ix += 1
           iy = 0
-          iz = 0
           prev_x = x
           prev_y = y
         elif prev_y != y:
           iy += 1
-          iz = 0
           prev_y = y
-          
-      ds['value'][it,iz,iy,ix] = calc_value(r, it)
-
-      iz += 1
-      i += 1
+            
+        ds['value'][it,iz,iy,ix] = calc_value(r, z, it)
+        z += res['z']
 
   print("Finished adding data for timestep!")
   return ds
@@ -128,12 +124,11 @@ def assign_values(input_fc, ds, it):
 def coord(field_name, row, cursor):
   return round(row[cursor.fields.index(field_name)], 4)
 
-def calc_value(row, i):
+def calc_value(row, z, i):
   v = 1
-  aoi = row[2]
-  org_height = row[3] # Terrain height before building
-  height = row[i + 4] # Terrain height at current time
-  z = row[18] # Current voxel point height
+  aoi = row[4]
+  org_height = row[5] # Terrain height before building
+  height = row[i + 6] # Terrain height at current time
 
   if height is None or aoi == 0: 
     height = org_height
@@ -148,7 +143,8 @@ def calc_value(row, i):
   return v
 
 def point_cube_2_netcdf(point_fc, nc_path, ext, res):
-  
+  print("Starting to convert fishnet to NetCDF...")
+  print("Operation started at: {}".format(datetime.datetime.now()))
   # Calculate the x, y, z, t dimensions of the NetCDF dataset to create
   calc_dim(point_fc, ext, res)
 
@@ -159,12 +155,11 @@ def point_cube_2_netcdf(point_fc, nc_path, ext, res):
   ds = assign_coord_values(point_fc, ds, ext, res)
 
   # Assign variables for each timestep
-  i = 0
-  while i < t_dim: # Repeat for each timestep 
-    ds = assign_values(point_fc, ds, i)
-    i += 1
-
+  for i in range(int(t_dim)): # Repeat for each timestep 
+    ds = assign_values(point_fc, ds, ext, res, i)
+  
   ds.close()
   print("Finished converting points to NetCDF!")
+  print("Operation ended at: {}".format(datetime.datetime.now()))
 
 
