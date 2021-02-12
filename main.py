@@ -27,20 +27,20 @@ gdb = r"D:\Data\GeoTek_21\Voxel\Voxel.gdb"
 folder = r"D:\Data\GeoTek_21\Voxel"
 
 # Area of interest
-bbox_fc = os.path.join(gdb, r"Voxel_bounding_box")
-extent_fc = os.path.join(gdb, r"Voxel_analysis_extent")
+bbox_fc = os.path.join(gdb, r"voxel_bounding_box")
+extent_fc = os.path.join(gdb, r"voxel_aoi")
 
 ext = { # Height and time extents
   "max_z": 210, #m.a.s.l
   "min_z": 160, #m.a.s.l
   "min_t": datetime.datetime(2020, 6, 11),
-  "max_t": datetime.datetime(2020, 6, 23)
+  "max_t": datetime.datetime(2020, 6, 23) #10 time steps (for dems use 23)
 }
 
 res = { # Analysis resolution
-  "x": 10, #meters
-  "y": 10, #meters
-  "z": 1, #meters
+  "x": 1, #meters
+  "y": 1, #meters
+  "z": 0.5, #meters
   "t": 1 #days
 }
 
@@ -58,13 +58,15 @@ dems = [["terrain.tif","Height"],
         ["Kleggerud_Svartskifer_200725-DEM.tiff","Height_25_07_2020"], 
         ["Kleggerud_Svartskifer_200825-DEM.tiff","Height_25_08_2020"], 
         ["Kleggerud_Svartskifer_200905-DEM.tiff","Height_05_09_2020"],
-        ["Kleggerud_Svartskifer_200908-DEM.tiff","Height_08_09_2020"]]
+        ["Kleggerud_Svartskifer_200908-DEM.tiff","Height_08_09_2020"],
+        ["dem_trau.tif","Height_Planned"]]
 
 # Output data
 s = suffix(res) 
 fishnet_poly_fc = os.path.join(gdb, "fishnet" + s)
 fishnet_fc = fishnet_poly_fc + "_label"
-nc_results_file = os.path.join(folder, "voxel{}.nc".format(s))
+#fishnet_fc = os.path.join(gdb, r"fishnet_1x1x05_interpolate")
+nc_results_file = os.path.join(folder, "voxel{}_Trau_v1.nc".format(s))
 
 ###############################################################################
 ## Script
@@ -73,13 +75,13 @@ nc_results_file = os.path.join(folder, "voxel{}.nc".format(s))
 print("Script started: {}".format(datetime.datetime.now()))
 
 # Create fishnet for analysis bounding box
-#create_fishnet(fishnet_poly_fc, bbox_fc, res)
+create_fishnet(fishnet_poly_fc, bbox_fc, res)
 
 # Tag points in fishnet with analysis extent
-#tag_fishnet(fishnet_fc, extent_fc)
+tag_fishnet(fishnet_fc, extent_fc)
 
 # Add DEM heights as attributes to fishnet points
-#add_dem_heights(fishnet_fc, dem_folder, dems)
+add_dem_heights(fishnet_fc, dem_folder, dems)
 
 # Convert 3D point cube to NetCDF-file
 point_cube_2_netcdf(fishnet_fc, nc_results_file, ext, res)

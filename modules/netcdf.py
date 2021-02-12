@@ -128,11 +128,22 @@ def calc_value(row, z, i):
   v = 1
   aoi = row[4]
   org_height = row[5] # Terrain height before building
+  tin_height = row[18] # Planned terrain height
   height = row[i + 6] # Terrain height at current time
+
+  if tin_height is None:
+    tin_height = org_height
 
   if height is None or aoi == 0: 
     height = org_height
 
+  # Mark points in zone between planned and orginal heights
+  if z > org_height and z < tin_height: # Planned deposit
+    v = 5
+  elif z > tin_height and z <= org_height: # Planned excavation
+    v = 4
+
+  # Mark points in zone between original and current heights
   if z > org_height and z <= height: # Deposit
     v = 3
   elif z < org_height and z >= height: # Excavation
