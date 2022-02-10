@@ -1,11 +1,14 @@
+import logging
 import arcpy
 from modules.data_mgmt import create_featureclass
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%H:%M:%S')
+log = logging.getLogger(__name__)
 
 def fishnet_2_point_cube(cube_path, fishnet_fc, ext, res):
   z_layers = (ext['max_z'] - ext['min_z']) / res['z']
-  print("Creating cube {}...".format(cube_path))
-  print("Adding {} layers of points".format(str(z_layers)))
+  log.info(f"Creating cube {cube_path}...")
+  log.info(f"Adding {z_layers} layers of points")
   
   cube_fc = create_featureclass(cube_path, fishnet_fc)
   arcpy.management.AddField(cube_fc, 'X', 'DOUBLE')
@@ -17,11 +20,11 @@ def fishnet_2_point_cube(cube_path, fishnet_fc, ext, res):
     copy_points(fishnet_fc, cube_fc, z, None)
     z += res['z']
 
-  print("Finished creating 3D point cube from fishnet!")
+  log.info("Finished creating 3D point cube from fishnet!")
 
 
 def copy_points(input_fc, output_fc, z, time):
-  print("Copying points for height: {}...".format(str(z)))
+  log.info(f"Copying points for height: {z}...")
 
   fields = arcpy.Describe(output_fc).fields
   field_names = [field.name if field.name != 'Shape' else 'SHAPE@' for field in fields]
@@ -35,8 +38,8 @@ def copy_points(input_fc, output_fc, z, time):
       f.insert(0, (r[1][0],r[1][1], z)) # Add 3D-point shape
       f.insert(0, r[0]) # Add object id
 
-      f.append(r[1][0]) # Add x-coordinate to attributes
-      f.append(r[1][1]) # Add y-coordinate to attributes
+      #f.append(r[1][0]) # Add x-coordinate to attributes
+      #f.append(r[1][1]) # Add y-coordinate to attributes
       f.append(z) # Add z-coordinate to attributes
 
       output.insertRow(tuple(f))

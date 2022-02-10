@@ -12,6 +12,7 @@
 ##  6. Interpolates height values between DEM capture dates                  ## 
 ###############################################################################
 
+import logging
 import os
 import datetime
 from modules.data_mgmt import suffix
@@ -66,7 +67,7 @@ s = suffix(res)
 fishnet_poly_fc = os.path.join(gdb, "fishnet" + s)
 fishnet_fc = fishnet_poly_fc + "_label"
 #fishnet_fc = os.path.join(gdb, r"fishnet_1x1x05_interpolate")
-nc_results_file = os.path.join(folder, "voxel{}_Trau_v1.nc".format(s))
+nc_results_file = os.path.join(folder, "voxel{}_Trau_v2.nc".format(s))
 
 ###############################################################################
 ## Script
@@ -75,13 +76,13 @@ nc_results_file = os.path.join(folder, "voxel{}_Trau_v1.nc".format(s))
 print("Script started: {}".format(datetime.datetime.now()))
 
 # Create fishnet for analysis bounding box
-create_fishnet(fishnet_poly_fc, bbox_fc, res)
+#create_fishnet(fishnet_poly_fc, bbox_fc, res)
 
 # Tag points in fishnet with analysis extent
-tag_fishnet(fishnet_fc, extent_fc)
+#tag_fishnet(fishnet_fc, extent_fc)
 
 # Add DEM heights as attributes to fishnet points
-add_dem_heights(fishnet_fc, dem_folder, dems)
+#add_dem_heights(fishnet_fc, dem_folder, dems)
 
 # Convert 3D point cube to NetCDF-file
 point_cube_2_netcdf(fishnet_fc, nc_results_file, ext, res)

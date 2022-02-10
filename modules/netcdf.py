@@ -1,8 +1,12 @@
+import logging
 import os
 import datetime
 import arcpy
 import netCDF4 as nc
 import numpy as np
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%H:%M:%S')
+log = logging.getLogger(__name__)
 
 x_dim = 51
 y_dim = 25
@@ -10,7 +14,7 @@ z_dim = 51
 t_dim = 12
 
 def calc_dim(cube_fc, ext, res):
-  print("Calculating dimensions for: {}...".format(cube_fc))
+  log.info(f"Calculating dimensions for: {cube_fc}...")
   desc = arcpy.Describe(cube_fc)
   global x_dim
   x_dim = ((round(desc.extent.XMax, 4) - round(desc.extent.XMin, 4)) / res['x']) + 1
@@ -24,17 +28,17 @@ def calc_dim(cube_fc, ext, res):
   global t_dim
   t_dim = ((ext['max_t'] - ext['min_t']).days / res['t'])
 
-  print("X-dimensions: {}".format(x_dim))
-  print("Y-dimensions: {}".format(y_dim))
-  print("Z-dimensions: {}".format(z_dim))
-  print("T-dimensions: {}".format(t_dim))
+  log.info(f"X-dimensions: {x_dim}")
+  log.info(f"Y-dimensions: {y_dim}")
+  log.info(f"Z-dimensions: {z_dim}")
+  log.info(f"T-dimensions: {t_dim}")
 
 def create_netcdf_ds(output_file):
-  print("Creating NetCDF dataset: {}...".format(output_file))
+  log.info(f"Creating NetCDF dataset: {output_file}...")
   ds = nc.Dataset(output_file, 'w', format='NETCDF4')
   
   # Dimensions
-  print("Creating dimensions...")
+  log.info("Creating dimensions...")
   
   time = ds.createDimension('time', None)
   x = ds.createDimension('x', x_dim)
@@ -42,7 +46,7 @@ def create_netcdf_ds(output_file):
   z = ds.createDimension('z', z_dim)
 
   # Coordinate variables
-  print("Creating coordinate variables...")
+  log.info("Creating coordinate variables...")
   
   calendar = 'standard'
   units = 'days since 1990-01-01 00:00'
@@ -56,17 +60,17 @@ def create_netcdf_ds(output_file):
   z_coords.units = 'Meter'
   
   # Variables
-  print("Creating variables...")
+  log.info("Creating variables...")
   
   value = ds.createVariable('value', 'u1', ('time','z', 'y', 'x' )) # ArcGIS Expects time,z,y,x dimension order
   value.units = 'Unsigned integer'
 
-  print("Finished creating NetCDF dataset")
+  log.info("Finished creating NetCDF dataset")
   return ds
 
 def assign_coord_values(input_fc, ds, ext, res): 
   
-  print("Assigning values to coordinate variables...")
+  log.info("Assigning values to coordinate variables...")
   desc = arcpy.Describe(input_fc)
   ds['time'][:] = np.arange(
     nc.date2num(ext['min_t'], 'days since 1990-01-01 00:00', 'standard'), 
@@ -84,11 +88,11 @@ def assign_coord_values(input_fc, ds, ext, res):
     ext['min_z'], 
     ext['max_z'] + res['z'], res['z']).tolist()
 
-  print("Finished assigning coordinate variables!")
+  log.info("Finished assigning coordinate variables!")
   return ds
 
 def assign_values(input_fc, ds, ext, res, it):
-  print("Adding data for timestep {}...".format(it))
+  log.info(f"Adding data for timestep {it}...")
   sql = 'ORDER BY X, Y'
 
   with arcpy.da.SearchCursor(input_fc, "*", sql_clause=(None, sql)) as cursor:
@@ -118,7 +122,7 @@ def assign_values(input_fc, ds, ext, res, it):
         ds['value'][it,iz,iy,ix] = calc_value(r, z, it)
         z += res['z']
 
-  print("Finished adding data for timestep!")
+  log.info("Finished adding data for timestep!")
   return ds
 
 def coord(field_name, row, cursor):
@@ -129,7 +133,11 @@ def calc_value(row, z, i):
   aoi = row[4]
   org_height = row[5] # Terrain height before building
   tin_height = row[18] # Planned terrain height
-  height = row[i + 6] # Terrain height at current time
+  height = org_height # Use terrain before building for first timestep
+  
+  if i != 0:
+    #height = row[i + 6] # Terrain height at current time
+    height = row[i + 5] # Terrain height from drone
 
   if tin_height is None:
     tin_height = org_height
@@ -154,8 +162,7 @@ def calc_value(row, z, i):
   return v
 
 def point_cube_2_netcdf(point_fc, nc_path, ext, res):
-  print("Starting to convert fishnet to NetCDF...")
-  print("Operation started at: {}".format(datetime.datetime.now()))
+  log.info("Starting to convert fishnet to NetCDF...")
   # Calculate the x, y, z, t dimensions of the NetCDF dataset to create
   calc_dim(point_fc, ext, res)
 
@@ -170,7 +177,7 @@ def point_cube_2_netcdf(point_fc, nc_path, ext, res):
     ds = assign_values(point_fc, ds, ext, res, i)
   
   ds.close()
-  print("Finished converting points to NetCDF!")
-  print("Operation ended at: {}".format(datetime.datetime.now()))
+  log.info("Finished converting points to NetCDF!")
+
 
 
