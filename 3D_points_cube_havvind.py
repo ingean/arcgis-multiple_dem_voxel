@@ -14,10 +14,10 @@
 
 import logging
 import os
-import datetime
 from modules.data_mgmt import suffix
 from modules.fishnet import create_fishnet, tag_fishnet, add_dem_heights
 from modules.point_cube import fishnet_2_point_cube 
+from modules.netcdf import points_to_netcdf
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%H:%M:%S')
 log = logging.getLogger(__name__)
@@ -26,13 +26,16 @@ log = logging.getLogger(__name__)
 ## Parameters
 ###############################################################################
 
+#VERSION = "" # Debug version (smaller area)
+VERSION = "_all"
+
 # Workspace
 GDB = r"D:\Data\GeoTek_22\Havvind_voxler\point_cubes.gdb"
 PROJECT_FOLDER = r"D:\Data\GeoTek_22\Havvind_voxler"
 
 # Area of interest
-BBOX_FC = os.path.join(GDB, r"analysis_extent_all")
-EXTENT_FC = os.path.join(GDB, r"analysis_aoi_all")
+BBOX_FC = os.path.join(GDB, f"analysis_extent{VERSION}")
+EXTENT_FC = os.path.join(GDB, f"analysis_aoi{VERSION}")
 
 NC_EXTENT = { # Height and time extents
   "max_z": 0, # m.a.s.l
@@ -40,9 +43,9 @@ NC_EXTENT = { # Height and time extents
 }
 
 NC_RESOLUTION = { # Analysis resolution
-  "x": 100, # meters
-  "y": 100, # meters
-  "z": 1, # meters
+  "x": 25, # meters
+  "y": 25, # meters
+  "z": -1, # meters
 }
 
 # Input data
@@ -55,10 +58,9 @@ DEMS = [["RVO_HKN_MBES_DEM_0_5m","Seabed"],
 
 # Output data
 FILE_SUFFIX = suffix(NC_RESOLUTION)
-FISHNET_FC_POLY = os.path.join(GDB, f"fishnet_all{FILE_SUFFIX}")
+FISHNET_FC_POLY = os.path.join(GDB, f"fishnet{VERSION}{FILE_SUFFIX}")
 FISHNET_FC = f"{FISHNET_FC_POLY}_label"
-#fishnet_fc = os.path.join(gdb, r"fishnet_1x1x05_interpolate")
-NC_FILE = os.path.join(PROJECT_FOLDER, f"voxel{FILE_SUFFIX}.nc")
+NC_FILE = os.path.join(PROJECT_FOLDER, f"voxel{VERSION}{FILE_SUFFIX}.nc")
 POINT_CUBE = os.path.join(GDB, f"{FISHNET_FC}_3D_point_cube")
 
 ###############################################################################
@@ -75,6 +77,8 @@ tag_fishnet(FISHNET_FC, EXTENT_FC)
 add_dem_heights(FISHNET_FC, DEM_GDB, DEMS)
 
 # Convert to 3D point cube
-fishnet_2_point_cube(POINT_CUBE, FISHNET_FC, NC_EXTENT, NC_RESOLUTION)
+#fishnet_2_point_cube(POINT_CUBE, FISHNET_FC, NC_EXTENT, NC_RESOLUTION)
+
+points_to_netcdf(FISHNET_FC, NC_FILE, NC_EXTENT, NC_RESOLUTION)
 
 log.info(f"Script ended!")

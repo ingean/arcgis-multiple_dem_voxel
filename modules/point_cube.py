@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefm
 log = logging.getLogger(__name__)
 
 def fishnet_2_point_cube(cube_path, fishnet_fc, ext, res):
-  z_layers = (ext['max_z'] - ext['min_z']) / res['z']
+  z_layers = (ext['max_z'] - ext['min_z']) / abs(res['z'])
   log.info(f"Creating cube {cube_path}...")
   log.info(f"Adding {z_layers} layers of points")
   
@@ -18,7 +18,7 @@ def fishnet_2_point_cube(cube_path, fishnet_fc, ext, res):
 
   while z <= ext['max_z']:
     copy_points(fishnet_fc, cube_fc, z, None)
-    z += res['z']
+    z += abs(res['z'])
 
   log.info("Finished creating 3D point cube from fishnet!")
 
